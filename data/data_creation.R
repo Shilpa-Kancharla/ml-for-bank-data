@@ -17,5 +17,5 @@ mean(bank.full$y == 'yes')
 mean(train$y == 'yes')
 mean(test$y == 'yes')
 
-write.csv(train, "~/Documents/STOR_565/Group project/565project/data/basic_train.csv")
-write.csv(test, "~/Documents/STOR_565/Group project/565project/data/basic_test.csv")
+write.csv(train, "~/Documents/STOR_565/Group project/565project/data/basic_train.csv", row.names = FALSE)
+write.csv(test, "~/Documents/STOR_565/Group project/565project/data/basic_test.csv", row.names = FALSE)
