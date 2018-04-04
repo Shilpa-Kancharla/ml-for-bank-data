@@ -10,4 +10,8 @@
 
 ### Updates
 
-Deleting default and P-outcome predictors, because they are missing 86% and 21% of their data, respectively.
+Modified the p-days variable and it made it a categorical variable. Create categories of 
+- A = 0-7
+- B=7-14
+- C=14-998
+- D=998+
