@@ -29,5 +29,5 @@ svm.roc <- roc(test.sample$y, attr(svm.predicts, "probabilities")[,1])
 plot(svm.roc)
 svm.roc$auc
 
-
-
+save(svm.linear, 
+     )
