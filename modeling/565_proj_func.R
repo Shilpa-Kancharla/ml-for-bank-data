@@ -86,3 +86,22 @@ syn_data_borderline <- function(dataframe,k){
     data <- ADAS(dataframe[,2:ncol(dataframe)],dataframe[,1],K=k)
     return (data$data)
 }
+Principal_Component <- function(dataframe){
+  "Subset of raw data with only the economic features"
+  dataframe_features_subset <- data.frame("emp.var.rate"=dataframe$emp.var.rate,"cons.price.idx"=dataframe$cons.conf.idx,"cons.conf.idx"=dataframe$cons.conf.idx,"euribor3m"=dataframe$euribor3m,"nr.employed"=dataframe$nr.employed)
+  
+  "Create Principal Components of the economic features"
+  dataframe_subset_princomp <- prcomp(dataframe_features_subset,center=TRUE,scale.=TRUE)
+  
+  "Create a new dataframe by removing the original economic features and replacing them with the principal components  "
+  dataframe_new <- dataframe[, !(colnames(dataframe) %in% c("emp.var.rate","cons.price.idx","cons.conf.idx","euribor3m","nr.employed"))]
+  dataframe_new$PC1 <- dataframe_subset_princomp$x[,1]
+  dataframe_new$PC2 <- dataframe_subset_princomp$x[,2]
+  dataframe_new$PC3 <- dataframe_subset_princomp$x[,3]
+  dataframe_new$PC4 <- dataframe_subset_princomp$x[,4]
+  dataframe_new$PC5 <- dataframe_subset_princomp$x[,5]
+  
+  "Return the new dataframe"
+  return (dataframe_new)
+}
+
