@@ -88,6 +88,7 @@ augmented_dataframe <- function(dataframe){
     return (bank_aug)
 }
 
+#Dummy variable creation for combolog dataset
 augmented_dataframe_combodata <- function(dataframe){
   library(mlr)
   
