@@ -8,7 +8,6 @@ dim(bank.train)
 dim(bank.test)
 
 ###################################### data ##########################################################
-str(bank.train)
 source("565_proj_func.R")
 
 bank.dummy=augmented_dataframe(bank.train)
@@ -20,40 +19,47 @@ dim(bank.smote$data)
 str(bank.smote$data)
 bank.PCA<-Principal_Component(bank.dummy)
 
+#################### generate test dataset###################
+bank.dummy.t=augmented_dataframe(bank.test)
+head(bank.dummy.t)
+bank.smote.t=syn_data_borderline(bank.dummy.t, k=5)
+set.seed(1005)
+bank.smote.t <- ADAS(bank.dummy.t[,2:ncol(bank.dummy.t)],bank.dummy.t[,1],K=5)
+dim(bank.smote.t$data)
+str(bank.smote.t$data)
+bank.PCA<-Principal_Component(bank.dummy.t)
 
-# opar<-par(lwd=2,cex=0.5,mfrow=c(5,4))
-# for (i in 1:(length(bank.train)-1)){
-# boxplot(as.factor(bank.train[,19])~bank.train[,i], ylab=colnames(bank.train)[2])
-# }
+
+
 ################################## logistic #####################################################################
 
 
 x.matrix=model.matrix(~.,bank.smote$data[,-52])[,-1]
 dim(x.matrix)
 
-foldid=sample(1:3,size=length(bank.smote$class),replace=TRUE)
+foldid=sample(1:2,size=length(bank.smote$class),replace=TRUE)
+
+start=Sys.time()
 bank.lasso<-cv.glmnet(x.matrix,bank.smote$data$class, family="binomial", type.measure="class", alpha=1)
+stop=Sys.time()
+
+stop-start
 
 summary(bank.lasso)
-plot(bank.lasso)
-text(bank.lasso)
+plot(bank.lasso[-10])
+
+log(bank.lasso$lambda.1se)
+
+
+fit<-glmnet(x.matrix,bank.smote$data$class, family="binomial", alpha=1,lambda = bank.lasso$lambda.1se)
+
+logistic.pridict<-predict (fit, newdata = bank.test, type="response")
 
 
 #foldid=sample(1:10,size = length(bank.train$y) )
 
 #cv.glmnet(x.matrix,bank.full$y, family=binomial, type.measure = "class",alpha=1)
 
-
-
-
-bank.x <- bank.full[,!colnames(bank.full) %in% c("duration","y")]
-library(glmnet)
-x.matrix <- model.matrix(~., bank.x)[,-1]
-set.seed(1)
-foldid=sample(1:10,size=length(bank.full$y),replace=TRUE)
-glm.cv =cv.glmnet(x.matrix,bank.full$y,family="binomial",type.measure = "class",foldid=foldid,alpha=1)
-plot(glm.cv)
-text(glm.cv)
 
 
 
