@@ -8,6 +8,9 @@
 ### basic_train.csv / basic_test.csv
 * Full dataset split into training and test sets (75%/25%) without any modification to features.
 
+### modified_train.csv / modified_test.csv
+* Split dataset with categorical cutpdays and top 2 economic principal components
+
 ### Updates
 
 Modified the p-days variable and it made it a categorical variable. Create categories of 
