@@ -85,7 +85,7 @@ augmented_dataframe <- function(dataframe){
    names(bank_aug)[53] <- "nr.employed" 
    
 
-    return (bank_aug)
+   return (bank_aug)
 }
 
 #Dummy variable creation for combolog dataset
@@ -172,6 +172,7 @@ syn_data_borderline <- function(dataframe,k){
 cross_validation_trees <- function(trainingdata,treesize){
   library(caret)
   library(randomForest)
+  library(pROC)
   #Divide the data into 5 folds
   data_folds <- createFolds(trainingdata$y,k=5,list=FALSE)
   
@@ -191,7 +192,9 @@ cross_validation_trees <- function(trainingdata,treesize){
   
   #Create a vector to store number of correctly classified points at every step. 
   result_list <- c(rep(0,5))
-  
+  area_under_curve <- c(rep(0,5))
+  trainlist <- c(rep(0,5))
+  testlist <- c(rep(0,5))
   #Create list to store each training and test fold. The lists will be used inside a for loop to build different models.
   trainlist <- list(data_train_fold1,data_train_fold2,data_train_fold3,data_train_fold4,data_train_fold5)
   testlist <- list(test_data_fold1,test_data_fold2,test_data_fold3,test_data_fold4,test_data_fold5)
@@ -201,17 +204,11 @@ cross_validation_trees <- function(trainingdata,treesize){
     prediction <- predict(randomforest_model,newdata=testlist[[i]],type='response')
     table <- table(prediction,testlist[[i]]$y)
     result_list[i] <- (table[1]+table[4])
+    rf.roc <- roc(testlist[[i]]$y,ifelse(prediction==1,1,0))
+    area_under_curve[i] <- rf.roc$auc[1]
 
   }
-  return (list(result_list,randomforest_model))
+  return (list(result_list,randomforest_model,area_under_curve))
 }
 
 
-treesize = c(5,6,7,8)
-validation <- c(rep(0,length(treesize)))
-z=0
-for (i in 1:4){
-  results <- cross_validation_trees(bank,treesize[i])
-  validation[i] <- sum(results)/nrow(bank)
-}
-print (validation)
