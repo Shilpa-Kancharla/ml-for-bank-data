@@ -1,9 +1,9 @@
-#library(gbm)
 library(glmnet)
-bank.train <- read.csv("C:\\Users\\tbian\\Documents\\GitHub\\565project\\data\\combolog.train.csv", sep ="")
-bank.test <- read.csv("C:\\Users\\tbian\\Documents\\GitHub\\565project\\data\\combolog.test.csv", sep ="")
+bank.train.mod <- read.csv("C:\\Users\\tbian\\Documents\\GitHub\\565project\\data\\modified_train.csv")
+bank.test.mod <- read.csv("C:\\Users\\tbian\\Documents\\GitHub\\565project\\data\\modified_test.csv")
 bank.train <- read.csv("C:\\Users\\tbian\\Documents\\GitHub\\565project\\data\\basic_train.csv")
-# bank.test<-read.csv("C:\\Users\\tbian\\Documents\\GitHub\\565project\\data\\basic_test.csv")
+bank.test <- read.csv("C:\\Users\\tbian\\Documents\\GitHub\\565project\\data\\basic_test.csv")
+
 dim(bank.train)
 dim(bank.test)
 
@@ -11,30 +11,35 @@ dim(bank.test)
 source("565_proj_func.R")
 
 bank.dummy=augmented_dataframe(bank.train)
-head(bank.dummy)
-bank.smote=syn_data_borderline(bank.dummy, k=5)
+dim(bank.dummy)
+#bank.smote=syn_data_borderline(bank.PCA, k=5)
 set.seed(1005)
 bank.smote <- ADAS(bank.dummy[,2:ncol(bank.dummy)],bank.dummy[,1],K=5)
 dim(bank.smote$data)
 str(bank.smote$data)
-bank.PCA<-Principal_Component(bank.dummy)
+#bank.PCA<-Principal_Component(bank.dummy)
+#dim(bank.PCA)
 
 #################### generate test dataset###################
 bank.dummy.t=augmented_dataframe(bank.test)
-head(bank.dummy.t)
-bank.smote.t=syn_data_borderline(bank.dummy.t, k=5)
-set.seed(1005)
-bank.smote.t <- ADAS(bank.dummy.t[,2:ncol(bank.dummy.t)],bank.dummy.t[,1],K=5)
-dim(bank.smote.t$data)
-str(bank.smote.t$data)
-bank.PCA<-Principal_Component(bank.dummy.t)
-
+dim(bank.dummy.t)
+str(bank.dummy.t)
+#bank.smote.t=syn_data_borderline(bank.dummy.t, k=5)
+#set.seed(1005)
+#bank.smote.t <- ADAS(bank.dummy.t[,2:ncol(bank.dummy.t)],bank.dummy.t[,1],K=5)
+#dim(bank.smote.t$data)
+#str(bank.smote.t$data)
+#bank.PCA.t<-Principal_Component(bank.dummy.t)
+#dim(bank.PCA.t)
 
 
 ################################## logistic #####################################################################
 
 
-x.matrix=model.matrix(~.,bank.smote$data[,-52])[,-1]
+x.matrix=model.matrix(~.,bank.smote$data[,-53])[,-1]
+x.test=model.matrix(~.,bank.dummy.t[,-1])[,-1]
+y.test=bank.dummy.t$y
+
 dim(x.matrix)
 
 foldid=sample(1:2,size=length(bank.smote$class),replace=TRUE)
@@ -46,23 +51,45 @@ stop=Sys.time()
 stop-start
 
 summary(bank.lasso)
-plot(bank.lasso[-10])
-
-log(bank.lasso$lambda.1se)
-
+plot(bank.lasso)
 
 fit<-glmnet(x.matrix,bank.smote$data$class, family="binomial", alpha=1,lambda = bank.lasso$lambda.1se)
 
-logistic.pridict<-predict (fit, newdata = bank.test, type="response")
+logistic.predict<-predict (fit, newx = x.test , type="response")
+log.pre<-ifelse(logistic.predict>=0.5,1,0)
+
+dim(log.pre)
+dim(y.test)
+table(y.test, log.pre)
 
 
-#foldid=sample(1:10,size = length(bank.train$y) )
+################################################################################################################
+str(bank.train)
+str(bank.test)
+dim(bank.train)
 
-#cv.glmnet(x.matrix,bank.full$y, family=binomial, type.measure = "class",alpha=1)
+x.matrix.b<-model.matrix(~.,bank.train[,-20])[,-1]
+x.test.b<-model.matrix(~.,bank.test[,-20])[,-1]
+y.test.b=as.numeric(bank.test$y)
 
+foldid=sample(1:2,size=length(bank.train$y),replace=TRUE)
 
+start=Sys.time()
+bank.lasso.b<-cv.glmnet(x.matrix,bank.train$y, family="binomial", type.measure="class", alpha=1)
+stop=Sys.time()
 
+stop-start
+plot(bank.lasso.b)
+fit.b<-glmnet(x.matrix,bank.train$y, family="binomial", alpha=1,lambda = bank.lasso$lambda.1se)
 
+logistic.predict.b<-predict (fit.b, newx = x.test , type="response")
+log.pre.b<-ifelse(logistic.predict.b<0.5,1,2)
+
+table(y.test.b, log.pre.b)
+1-mean(y.test.b==log.pre.b)
+log.roc <- roc(y.test.b, attr(logistic.predict.b, "probabilities")[,1])
+plot(log.roc)
+log.roc$auc
 
 ##################################################################################################################
 # Make 0/1 factor 
@@ -94,3 +121,12 @@ glm.pred[glm.probs>.5]="no"
 table(glm.pred,bank.test$y)
 
 mean(glm.pred==bank.test$y)
+
+
+svm.predicts <- predict(svm.linear, newdata = test.sample, probability = TRUE)
+svm.err <- mean(svm.predicts != test.sample$y)
+
+svm.roc <- roc(test.sample$y, attr(svm.predicts, "probabilities")[,1])
+plot(svm.roc)
+svm.roc$auc
+
