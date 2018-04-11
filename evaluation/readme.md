@@ -10,4 +10,4 @@
 * 
 
 ## Logistic Regression
-* Error rate: 10.0%, AUC (Modified, No SMOTE)
+* Error rate: 10.0%, AUC: ??? (Modified, No SMOTE)
