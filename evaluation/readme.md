@@ -8,7 +8,11 @@
 * Error rate: 10.2%, AUC: TBA (Modified, without SMOTE)
 
 ## Boosting
-* 
+Running on basic data set
+* Error rate: 9.8%, AUC: .80(Modified, SMOTE)
+* Error rate: 9.8%, AUC: .80 (Modified, without SMOTE)
+Running on modified data set
+* Error rate: 9.3%, AUC: 0.82 (Modified, without SMOTE)
 
 ## Bagging
 * Error rate: 10.2%, AUC: TBA (Modified, without SMOTE)
