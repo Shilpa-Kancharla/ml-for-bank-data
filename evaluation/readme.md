@@ -22,4 +22,5 @@ Running on modified data set
   **Bagging Model II: divide by 3; Test Error: 10.18%; AUC: TBA
 
 ## Logistic Regression
-* Error rate: 10.0%, AUC: ??? (Modified, No SMOTE)
+* Error rate: 10.14%, AUC: 0.764 (basic, No SMOTE)
+* Error rate: 10.16%, AUC: 0.785 (Modified, No SMOTE)
