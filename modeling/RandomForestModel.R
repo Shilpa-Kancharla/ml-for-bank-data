@@ -36,12 +36,12 @@ test <- augmented_dataframe(test)
 modeldf <- rbind(train,test)
 
 model <- randomForest(factor(y)~.,data=modeldf[1:nrow(train),],mtry=5,importance=TRUE)
-
+library(pROC)
 prediction_basic <- predict(model,test,type='response')
 pred_table_basic <- table(prediction_basic,test$y)
-rf.roc_bestmodel_basic <- roc(test$y,ifelse(prediction==1,1,0))
+rf.roc_bestmodel_basic <- roc(test$y,ifelse(prediction_basic==1,1,0))
 area_under_curve_bestmodel_basic <- rf.roc_bestmodel_basic
-
+save(rf.roc_bestmodel_basic,file="~/Documents/565Project/evaluation/comparison.R")
 "The prediction accuracy is 0.896 and area under the curve is 0.663"
 #########################################################################################################################################################
 
@@ -88,6 +88,7 @@ prediction_modified <- predict(modified_model,modified_test,type='response')
 pred_table_modified <- table(prediction_modified,modified_test$y)
 rf.roc_bestmodel_modified <- roc(modified_test$y,ifelse(prediction_modified==1,1,0))
 area_under_curve_bestmodel_modified <- rf.roc_bestmodel_modified 
+save(rf.roc_bestmodel_modified,file="~/Documents/565Project/evaluation/comparison.R")
 
 "Prediction accuracy is 0.891 and AUC is 0.6697"
 ##########################################################################################################################################################
