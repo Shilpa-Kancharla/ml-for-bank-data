@@ -75,5 +75,7 @@ log.roc.m <- roc(y.test.m, as.numeric(logistic.predict.m))
 plot(log.roc.m)
 log.roc.m$auc
 
+plot(bank.lasso.m$)
 
+save(log.roc.m,"C:\\Users\\tbian\\Documents\\GitHub\\565project\\evaluation\\best_logistic.R")
 
