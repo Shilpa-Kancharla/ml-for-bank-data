@@ -33,12 +33,12 @@ load("~/Documents/STOR_565/Group project/565project/evaluation/best.boost.R")
 load("~/Documents/STOR_565/Group project/565project/evaluation/best_logistic.R")
 load("~/Documents/STOR_565/Group project/565project/evaluation/comparison.R")
 
-plot(svm.roc, col="blue", lty=1)
+plot(svm.roc, col="blue", lty=1, cex.lab = 1.5, xlim = c(1,0))
 plot(roc_obj, col="black", add = TRUE)
 plot(log.roc.m, col="green", add = TRUE)
 plot(rf.roc_bestmodel_modified, col="orange", add = TRUE)
-legend("bottomright", c("Boosting (0.82)", "Logistic (0.79)", "SVM (0.75)", "RandomForest (0.66)"), 
-       col=c("black","green","blue","orange"), lty = 1)
+legend(0.4, 0.5, c("Boosting (0.82)", "Logistic (0.79)", "SVM (0.75)", "RandomForest (0.66)"), 
+       col=c("black","green","blue","orange"), lty = 1, cex = 1.2, box.lty=0)
 
 
 
