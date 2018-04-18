@@ -5,7 +5,7 @@
 
 ## RandomForest
 * Error rate: 11%, AUC: 0.67 (Modified, SMOTE)
-* Error rate: 10.2%, AUC: 0.50 (Modified, without SMOTE)
+* Error rate: 10.2%, AUC: 0.63 (Modified, without SMOTE)
 
 ## Boosting
 Running on basic data set
@@ -15,11 +15,11 @@ Running on modified data set
 * Error rate: 9.3%, AUC: 0.82 (Modified, without SMOTE)
 
 ## Bagging
-* Error rate: 10.2%, AUC: 0.50 (Modified, without SMOTE)
+* Error rate: 10.2%, AUC: 0.63 (Modified, without SMOTE)
 
-  - Bagging Model I: using square root; Test Error: 10.13%; AUC: 0.50
+  - Bagging Model I: using square root; Test Error: 10.13%; AUC: 0.6284
   
-  - Bagging Model II: divide by 3; Test Error: 10.18%; AUC: 0.50
+  - Bagging Model II: divide by 3; Test Error: 10.18%; AUC: 0.6307
 
 ## Logistic Regression
 * Error rate: 10.14%, AUC: 0.764 (basic, No SMOTE)
