@@ -1,0 +1,112 @@
+---
+title: "Decision Trees and Bagging"
+author: "Shilpa Kancharla"
+date: "4/25/2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+Decision Tree creation process. NOTE: This set of code doesn't use the SMOTE algorithm beforehand.
+Step 1: Fitting a tree on the training data, with 'y' as the response variable. Predicting the response on the test data. We use this to calculate the test error of the tree.
+```{r cars}
+#modified_train.csv is the training dataset
+#modified_test.csv is the test dataset
+library(tree)
+bank.train <- tree(y ~., data=modified_train) #creating decision tree
+summary(bank.train)
+plot(bank.train)
+text(bank.train, pretty=0)
+bank.pred <- predict(bank.train, modified_test, type="class")
+table(bank.pred, modified_test$y)
+```
+Step 2: Pruning the tree that was made on the training data. Predicting the response on the test data. We use this to calculate the test error of the pruned tree.
+```{r pressure, echo=FALSE}
+prune.bank <- prune.misclass(bank.train, best=2)
+plot(prune.bank)
+text(prune.bank, pretty=0)
+prune.pred <- predict(prune.bank, modified_test, type="class")
+table(prune.pred, modified_test$y)
+```
+Step 3: Determining the optimal tree size.
+```{r}
+cv.bank <- cv.tree(bank.train, FUN = prune.misclass) 
+plot(cv.bank$size, cv.bank$dev, type="b", xlab="Tree size", ylab="Deviance")
+```
+Step 4: Performing boosting on the training set with 1000 trees for a range of lambda values.
+```{r}
+library(gbm)
+powers <- seq(-5, -0.2, by=0.1)
+lambdas <- factor(10^powers)
+bank.train.err <- rep(NA, length(lambdas))
+train.matrix <- model.matrix(~ ., data=modified_train)[,-1]
+for (i in 1:length(lambdas)) {
+  bank.boost.train <- gbm(y ~ ., data = modified_train, distribution = "gaussian", n.trees = 1000, shrinkage = lambdas[i])
+  bank.pred.train <- predict(bank.boost.train, modified_train, n.trees = 1000)
+  diff <- as.numeric(bank.pred.train) - as.numeric(modified_train$y)
+  bank.train.err[i] <- mean((diff)^2)
+}
+plot(lambdas, bank.train.err, type="b", xlab="Shrinkage Values", ylab="Training MSE")
+```
+Step 5: Performing boosting on the test set with 1000 trees for a range of lambda values. Attempting to find the lambda that produces the minimum error.
+```{r}
+bank.test.err <- rep(NA, length(lambdas))
+for (i in 1:length(lambdas)) {
+  bank.boost.test <- gbm(y ~ ., data=modified_train, distribution = "gaussian", n.trees = 1000, 
+                    shrinkage = lambdas[i])
+  yhat <- predict(bank.boost.test, modified_test, n.trees = 1000)
+  diff2 <- as.numeric(yhat) - as.numeric(modified_test$y)
+  bank.test.err[i] <- mean((diff2)^2)
+}
+plot(lambdas, bank.test.err, type="b", xlab="Shrinkage Values", ylab="Test MSE")
+min(bank.test.err)
+lambdas[which.min(bank.test.err)]
+```
+Step 6: Trying to determine which variable is the most important.
+```{r}
+library(gbm)
+library(randomForest)
+boost.bank <- gbm(y ~ ., data = modified_train, distribution = "gaussian", n.trees=1000,
+                  shrinkage = lambdas[which.min(bank.test.err)])
+summary(boost.bank)
+```
+Step 7: Using bagging. Determining area under the curve. Determining which variable is the most important in the bagging model. Predicting on test data and test error.
+```{r}
+library(randomForest)
+library(pROC)
+bank.bag <- randomForest(y ~ ., data = modified_train, mtry = 10, ntree = 500)
+yhat.bag <- predict(bank.bag, newdata = modified_test, type= "response")
+yhat.bag[1:5]
+mean((as.numeric(yhat.bag) - as.numeric(modified_test$y))^2)
+pred_table <- table(yhat.bag, modified_test$y)
+bag.roc_basic.yes <- roc(modified_test$y, ifelse(yhat.bag=="yes",1,0))
+plot(bag.roc_basic.yes)
+bag.roc_basic.yes$auc
+varImpPlot(bank.bag)
+```
+Step 8: Creating two more bagging models. Taking a random sample of predictions with 20 predictors, and using the square root and dividing by 3 to choose as split candidates. Using these bagging models to predict on the test data, calculate the test error, and finding the area under the curve.
+```{r}
+set.seed(1)
+bank.bag1 <- randomForest(y ~ ., data=modified_train, mtry = sqrt(20), ntree=500)
+bank.bag2 <- randomForest(y ~ ., data=modified_train, mtry = 20/3, ntree= 500)
+varImpPlot(bank.bag1)
+varImpPlot(bank.bag2)
+library(randomForest)
+library(pROC)
+yhat.bag1 <- predict(bank.bag1, newdata = modified_test) #prediction
+mean((as.numeric(yhat.bag1) - as.numeric(modified_test$y))^2)
+pred_table1 <- table(yhat.bag1, modified_test$y)
+bag1.roc_basic <- roc(modified_test$y, ifelse(yhat.bag1=="yes",1,0))
+auc_basic1 <- bag1.roc_basic
+plot(bag1.roc_basic)
+bag1.roc_basic$auc
+yhat.bag2 <- predict(bank.bag2, newdata = modified_test) #prediction
+mean((as.numeric(yhat.bag2) - as.numeric(modified_test$y))^2)
+pred_table2 <- table(yhat.bag2, modified_test$y)
+bag2.roc_basic <- roc(modified_test$y, ifelse(yhat.bag2=="yes",1,0))
+auc_basic2 <- bag2.roc_basic
+plot(bag2.roc_basic)
+bag2.roc_basic$auc
+```
+
