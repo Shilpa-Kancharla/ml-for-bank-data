@@ -1,0 +1,108 @@
+---
+title: "STOR565 Final Project"
+author: "Tao Bian"
+date: "April 14, 2018"
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Logistic Regression with LASSO:
+
+```{r}
+library(glmnet)
+library(pROC)
+bank.train.mod <- read.csv("C:\\Users\\tbian\\Documents\\GitHub\\565project\\data\\modified_train.csv")
+bank.test.mod <- read.csv("C:\\Users\\tbian\\Documents\\GitHub\\565project\\data\\modified_test.csv")
+bank.train <- read.csv("C:\\Users\\tbian\\Documents\\GitHub\\565project\\data\\basic_train.csv")
+bank.test <- read.csv("C:\\Users\\tbian\\Documents\\GitHub\\565project\\data\\basic_test.csv")
+```
+
+Step2. do the lASSO logistic model based on the basic training dataset:
+```{r}
+set.seed(1005)
+x.matrix.b<-model.matrix(~.,bank.train[,-20])[,-1]
+x.test.b<-model.matrix(~.,bank.test[,-20])[,-1]
+y.test.b=bank.test$y
+foldid=sample(1:4,size=length(bank.train$y),replace=TRUE)
+bank.lasso.b<-cv.glmnet(x.matrix.b,bank.train$y, family="binomial", type.measure="class", alpha=1)
+plot(bank.lasso.b)
+min(bank.lasso.b$cvm)
+```
+Step 3. Fit the model with tuning lamda and generate test error and ROC Curve.
+```{r}
+set.seed(1005)
+fit.b<-glmnet(x.matrix.b,bank.train$y, family="binomial", alpha=1,lambda = bank.lasso.b$lambda.1se)
+logistic.predict.b<-predict (fit.b, newx = x.test.b , type="response")
+log.pre.b<-ifelse(logistic.predict.b<0.5,0,1)
+y.test.b<-ifelse(y.test.b=='no',0,1)
+table(y.test.b, log.pre.b)
+1-mean(y.test.b==log.pre.b)  #####[1] 0.1012044
+log.roc.b <- roc(y.test.b, as.numeric(logistic.predict.b))
+plot(log.roc.b)
+log.roc.b$auc
+```
+
+Now, we will do the lasso logistic regression on the modified train dataset and test dataset:
+```{r}
+set.seed(1005)
+x.matrix.m<-model.matrix(~.,bank.train.mod[,-14])[,-1]
+x.test.m<-model.matrix(~.,bank.test.mod[,-14])[,-1]
+y.test.m=bank.test.mod$y
+foldid.m=sample(1:4,size=length(bank.train.mod$y),replace=TRUE)
+bank.lasso.m<-cv.glmnet(x.matrix.m,bank.train.mod$y, family="binomial", type.measure="class", alpha=1)
+plot(bank.lasso.m)
+min(bank.lasso.m$cvm)
+```
+Check the test error and ROC curve:
+```{r}
+set.seed(1005)
+fit.m<-glmnet(x.matrix.m,bank.train.mod$y, family="binomial", alpha=1,lambda = bank.lasso.m$lambda.1se)
+logistic.predict.m<-predict (fit.m, newx = x.test.m , type="response")
+log.pre.m<-ifelse(logistic.predict.m<0.5,0,1)
+y.test.m<-ifelse(y.test.m=="no",0,1)
+table(y.test.m, log.pre.m)
+1-mean(y.test.m==log.pre.m)   #####[1] 0.1007187
+log.roc.m <- roc(y.test.m, as.numeric(logistic.predict.m))
+plot(log.roc.m)
+log.roc.m$auc
+```
+Blow is the logistic regression training at smote dataset:
+
+```{r}
+source("565_proj_func.R")
+bank.dummy=augmented_dataframe(bank.train)
+set.seed(1005)
+library(smotefamily)
+bank.smote <- ADAS(bank.dummy[,2:ncol(bank.dummy)],bank.dummy[,1],K=5)
+dim(bank.smote$data)
+str(bank.smote$data)
+
+#################### generate test dataset###################
+bank.dummy.t=augmented_dataframe(bank.test)
+dim(bank.dummy.t)
+str(bank.dummy.t)
+x.matrix=model.matrix(~.,bank.smote$data[,-53])[,-1]
+x.test=model.matrix(~.,bank.dummy.t[,-1])[,-1]
+y.test=bank.dummy.t$y
+
+################################## logistic ##################
+foldid=sample(1:2,size=length(bank.smote$class),replace=TRUE)
+bank.lasso<-cv.glmnet(x.matrix,bank.smote$data$class, family="binomial", type.measure="class", alpha=1)
+plot(bank.lasso)
+fit<-glmnet(x.matrix,bank.smote$data$class, family="binomial", alpha=1,lambda = bank.lasso$lambda.1se)
+logistic.predict<-predict (fit, newx = x.test , type="response")
+log.pre<-ifelse(logistic.predict>=0.5,1,0)
+table(y.test, log.pre)
+1-mean(y.test==log.pre)
+fit$beta
+```
+
+
+
+
