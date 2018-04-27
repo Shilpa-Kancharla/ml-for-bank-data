@@ -1,5 +1,5 @@
 ---
-title: "Code"
+title: "Appendix"
 output:
   pdf_document: default
   html_document: default
