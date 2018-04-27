@@ -4,7 +4,63 @@ output:
   pdf_document: default
   html_document: default
 ---
+This is the data prepration code. We use this to make the basic and modified training and test sets. The datasets were used for model building, the code for which is described in this document
+```{r,eval=FALSE}
+library(caret)
 
+# This line will need to be changed to the appropriate directory"
+bank.full <- read.csv("~/Documents/STOR_565/Group project/565project/data/bank-additional-full.csv", sep=";")
+
+# Remove duration column
+bank.full <- bank.full[bank.full$default != 'yes',-11]
+
+# Create pdays
+pdays <- bank.full$pdays
+
+#Create height categories of A = 0-7, B=7-14, C=14-998, D=998+
+cutpdays <- cut(pdays, breaks=c(-1,7,14,998,999), labels=c("A", "B", "C", "D"), right=TRUE)
+bank.full$cutpdays <- cutpdays
+
+# Split data into training and test set
+set.seed(565)
+train.index <- createDataPartition(bank.full$y, p = .75, list = FALSE)
+train <- bank.full[ train.index,]
+test  <- bank.full[-train.index,]
+
+# Check to make sure class proportions have been maintained
+mean(bank.full$y == 'yes')
+mean(train$y == 'yes')
+mean(test$y == 'yes')
+
+
+Principal_Component <- function(dataframe){
+  "Subset of raw data with only the economic features"
+  dataframe_features_subset <- data.frame("emp.var.rate"=dataframe$emp.var.rate,"cons.price.idx"=dataframe$cons.conf.idx,"cons.conf.idx"=dataframe$cons.conf.idx,"euribor3m"=dataframe$euribor3m,"nr.employed"=dataframe$nr.employed)
+  
+  "Create Principal Components of the economic features"
+  dataframe_subset_princomp <- prcomp(dataframe_features_subset,center=TRUE,scale.=TRUE)
+  
+  "Create a new dataframe by removing the original economic features and replacing them with the principal components  "
+  dataframe_new <- dataframe[, !(colnames(dataframe) %in% c("emp.var.rate","cons.price.idx","cons.conf.idx","euribor3m","nr.employed"))]
+  dataframe_new$economic1 <- dataframe_subset_princomp$x[,1]
+  dataframe_new$economic2 <- dataframe_subset_princomp$x[,2]
+  
+  "Return the new dataframe"
+  return (dataframe_new)
+}
+
+train.pca <- Principal_Component(train)
+test.pca <- Principal_Component(test)
+
+# Output basic train/test
+write.csv(train[,!(colnames(train) %in% c("cutpdays"))], "~/Documents/STOR_565/Group project/565project/data/basic_train.csv", row.names = FALSE)
+write.csv(test[,!(colnames(test) %in% c("cutpdays"))], "~/Documents/STOR_565/Group project/565project/data/basic_test.csv", row.names = FALSE)
+
+# Output changed train/test
+write.csv(train.pca[,!(colnames(train.pca) %in% c("pdays"))], "~/Documents/STOR_565/Group project/565project/data/modified_train.csv", row.names = FALSE)
+write.csv(test.pca[,!(colnames(test.pca) %in% c("pdays"))], "~/Documents/STOR_565/Group project/565project/data/modified_test.csv", row.names = FALSE)
+
+```
 
 The function below was used to generate artificial sample points using Synthetic Minority oversampling Procedure(SMOTE) in R. Before using SMOTE, we arranged the dataframe in R by making the first column the response variable and the other columns to be features. The function takes a numerical dataframe, and an integer k denoting the number of nearest neighbors to be used to impute data. 
 ```{r,eval=FALSE}
@@ -464,7 +520,7 @@ save(best.svm, file = "~/Documents/STOR_565/Group project/565project/modeling/be
 
 Decision Tree creation process. NOTE: This set of code doesn't use the SMOTE algorithm beforehand.
 Step 1: Fitting a tree on the training data, with 'y' as the response variable. Predicting the response on the test data. We use this to calculate the test error of the tree.
-```{r cars}
+```{r,eval=FALSE}
 #modified_train.csv is the training dataset
 #modified_test.csv is the test dataset
 library(tree)
@@ -476,7 +532,7 @@ bank.pred <- predict(bank.train, modified_test, type="class")
 table(bank.pred, modified_test$y)
 ```
 Step 2: Pruning the tree that was made on the training data. Predicting the response on the test data. We use this to calculate the test error of the pruned tree.
-```{r pressure, echo=FALSE}
+```{r,eval=FALSE}
 prune.bank <- prune.misclass(bank.train, best=2)
 plot(prune.bank)
 text(prune.bank, pretty=0)
@@ -484,12 +540,12 @@ prune.pred <- predict(prune.bank, modified_test, type="class")
 table(prune.pred, modified_test$y)
 ```
 Step 3: Determining the optimal tree size.
-```{r}
+```{r,eval=FALSE}
 cv.bank <- cv.tree(bank.train, FUN = prune.misclass) 
 plot(cv.bank$size, cv.bank$dev, type="b", xlab="Tree size", ylab="Deviance")
 ```
 Step 4: Performing boosting on the training set with 1000 trees for a range of lambda values.
-```{r}
+```{r,eval=FALSE}
 library(gbm)
 powers <- seq(-5, -0.2, by=0.1)
 lambdas <- factor(10^powers)
@@ -504,7 +560,7 @@ for (i in 1:length(lambdas)) {
 plot(lambdas, bank.train.err, type="b", xlab="Shrinkage Values", ylab="Training MSE")
 ```
 Step 5: Performing boosting on the test set with 1000 trees for a range of lambda values. Attempting to find the lambda that produces the minimum error.
-```{r}
+```{r,eval=FALSE}
 bank.test.err <- rep(NA, length(lambdas))
 for (i in 1:length(lambdas)) {
   bank.boost.test <- gbm(y ~ ., data=modified_train, distribution = "gaussian", n.trees = 1000, 
@@ -518,7 +574,7 @@ min(bank.test.err)
 lambdas[which.min(bank.test.err)]
 ```
 Step 6: Trying to determine which variable is the most important.
-```{r}
+```{r,eval=FALSE}
 library(gbm)
 library(randomForest)
 boost.bank <- gbm(y ~ ., data = modified_train, distribution = "gaussian", n.trees=1000,
@@ -526,7 +582,7 @@ boost.bank <- gbm(y ~ ., data = modified_train, distribution = "gaussian", n.tre
 summary(boost.bank)
 ```
 Step 7: Using bagging. Determining area under the curve. Determining which variable is the most important in the bagging model. Predicting on test data and test error.
-```{r}
+```{r,eval=FALSE}
 library(randomForest)
 library(pROC)
 bank.bag <- randomForest(y ~ ., data = modified_train, mtry = 10, ntree = 500)
@@ -540,7 +596,7 @@ bag.roc_basic.yes$auc
 varImpPlot(bank.bag)
 ```
 Step 8: Creating two more bagging models. Taking a random sample of predictions with 20 predictors, and using the square root and dividing by 3 to choose as split candidates. Using these bagging models to predict on the test data, calculate the test error, and finding the area under the curve.
-```{r}
+```{r,eval=FALSE}
 set.seed(1)
 bank.bag1 <- randomForest(y ~ ., data=modified_train, mtry = sqrt(20), ntree=500)
 bank.bag2 <- randomForest(y ~ ., data=modified_train, mtry = 20/3, ntree= 500)
@@ -591,17 +647,75 @@ boost <- function(train,test,trees,maxshrinkage){
     
 }
 ```
-Reading and Preparing Data for modelling
+Fit the boosting model. The smote function was giving an error for the modified dataset. Hence we chose to not use smote on the modified dataset. We have three different models below. We fit a boosting model on the basic dataset with and without SMOTE. We also fit a boosting model on the modified dataset without SMOTE.
 ```{r,eval=FALSE}
+#install.packages("ParamHelpers")
+#Boosting on Basic data sets
+library(splines)
+library(parallel)
+library(survival)
+library(lattice)
 library(gbm)
-#setwd("C:/Users/sunhwa/Documents/Spring2018/STOR565ML/group project/565project")
-setwd("~/Documents/STOR_565/Group project/565project")
+setwd("C:/Users/sunhwa/Documents/Spring2018/STOR565ML/group project/565project")
+source("565_proj_func.r")
+bank.train <- read.csv("basic_train.csv")
+bank.train.aug<-augmented_dataframe(bank.train)
+bank.test<-read.csv("basic_test.csv")
+bank.test.aug<-augmented_dataframe(bank.test)
+set.seed(1)
+idx = sample(1:nrow(bank.train.aug), size=0.75*nrow(bank.train.aug))
 
-source("modeling/565_proj_func.R")
+########################  without smote
+# Split data
+subtrain<-bank.train.aug[idx,]
+#subtain <- syn_data_borderline(subtrain,5)
+validate<-bank.train.aug[-idx,]
+newdf <- rbind(subtrain,validate,bank.test.aug)
+bank.boot<-boost(newdf[1:nrow(subtrain),],newdf[nrow(subtrain)+1:nrow(subtrain)+nrow(validate),],1000,0.01)
+model <- bank.boot[[3]]
+#bank_train <- syn_data_borderline(bank.train.aug,5)### f
+boost.bank = gbm(y~.,data=bank.train.aug, distribution= "bernoulli", n.trees=100,
+                 shrinkage=0.01, verbose =F, cv.folds = 5)
+prediction<-predict(model,newdf[30890:nrow(newdf),],n.trees=1000,type='response')
+prediction_class <- ifelse(prediction>0.5,1,0)
+
+table <- table(prediction_class,bank.test.aug$y)
+test_error = (mean(prediction_class!=bank.test.aug$y))
+library(pROC)
+roc_obj <- roc(prediction_class, bank.test.aug$y)
+auc(roc_obj)
+plot(roc_obj)
+
+###################### with smote
+
+# Split data
+subtrain<-bank.train.aug[idx,]
+subtrain.sm <- syn_data_borderline(subtrain,5)
+validate<-bank.train.aug[-idx,]
+newdf <- rbind(subtrain.sm,validate,bank.test.aug)
+bank.boot.sm<-boost(newdf[1:nrow(subtrain.sm),],newdf[nrow(subtrain.sm)+1:nrow(subtrain.sm)+nrow(validate),],1000,0.01)
+model.sm <- bank.boot.sm[[3]]
+bank_train <- syn_data_borderline(bank.train.aug,5)### f
+boost.bank.sm = gbm(y~.,data=bank.train.aug, distribution= "bernoulli", n.trees=1000,
+                    shrinkage=0.01, verbose =F, cv.folds = 5)
+prediction<-predict(boost.bank.sm,bank.test.aug,n.trees=1000,type='response')
+prediction_class <- ifelse(prediction >0.5,1,0)
+table <- table(bank.test.aug$y,prediction_class)
+test_error = (mean(prediction_class!=bank.test.aug$y))
+library(pROC)
+roc_obj2 <- roc(prediction_class, bank.test.aug$y)
+auc(roc_obj2)
+plot(roc_obj2)
+
+
+################### Boosting on modified data###############################
+library(gbm)
+setwd("C:/Users/sunhwa/Documents/Spring2018/STOR565ML/group project/565project")
+
+source("565_proj_func.R")
 #PREPROCESSING MODIFIED TRAINING DATA
-
-modified_test <-read.csv("data/modified_test.csv")
-modified_train<-read.csv("data/modified_test.csv")
+modified_test <-read.csv("modified_test.csv")
+modified_train<-read.csv("modified_test.csv")
 
 modified_test <- augmented_dataframe_combodata(modified_test)
 names(modified_test)[25] <- "default_no"
@@ -609,52 +723,30 @@ names(modified_test)[26] <- "default_unknown"
 names(modified_test)[27] <- "housing_no"
 names(modified_test)[28] <- "housing_unknown"
 
-
 modified_train <- augmented_dataframe_combodata(modified_train)
 names(modified_train)[25] <- "default_no"
 names(modified_train)[26] <- "default_unknown"
 names(modified_train)[27] <- "housing_no"
 names(modified_train)[28] <- "housing_unknown"
-#Applying smote function
-modified_train <- syn_data_borderline(modified_train,5)### for applying smote, run on
 
 idx2 = sample(1:nrow(modified_train), size=0.75*nrow(modified_train))
-#Split training data into subtrain and validation
+#Split data
 subtrain.mod<-modified_train[idx2,]
 validate.mod<-modified_train[-idx2,]
+modified.boot<-boost(subtrain.mod,validate.mod,1000,0.01)
 
-```
-Fit the boosting model
-```{r,eval=FALSE}
-subtrain.mod<- syn_data_borderline(subtrain.mod,5)### for applying smote, run on
-modified_test <- augmented_dataframe_combodata(modified_test)
 boost.modified = gbm(y~.,data=modified_train, distribution= "bernoulli", n.trees=1000,
                      shrinkage=0.01, verbose =F, cv.folds = 5)
-summary(boost.modified)
 
-#modified.boot<-boost(subtrain.mod,validate.mod,1000,0.01)
-#smote.test<-syn_data_borderline(bank.test.aug,k=5)
-#bank.boot.test<-boost(subtrain,validate,1000,0.1)
-#model <- modified.boot[[3]]
-#save(modified.boot,file="model.smoter")
-####### to predict ###########
-prediction<-predict(boost.modified,modified_test,n.trees=1000,type='response')
-#save(prediction,file="prediction_basic_test.csv")
+model <- modified.boot[[3]]
+save(modified.boot,file="model.smoter")
+###### to predict ###########
+prediction<-predict(model,modified_test,n.trees=1000,type='response')
 prediction_class <- ifelse(prediction >0.5,1,0)
 save(prediction,file="prediction_mod.smotecsv")
-
 table <- table(prediction_class,modified_test$y)
-save (table, file=("table_testerror.smote.mod.r"))
 test_error = (mean(prediction_class!=modified_test$y))
 
-#   prediction errors without smote             
-#prediction_class    0    1
-#0 9022  830
-#1  114  330
-# test_error
-# 0.09294872
-# Area under the curve: 0.8155
-# prediction errors with smote
 #### AUC graph##################
 #install.packages("pROC")
 #### without smote
@@ -662,38 +754,7 @@ library(pROC)
 roc_obj <- roc(prediction_class, modified_test$y)
 auc(roc_obj)
 plot(roc_obj)
-save(roc_obj,file="evaluation/best.boost.R" )
 
 
-smote.mod<-syn_data_borderline(subtrain.mod,k=5)
-
-boost.modified.smote = gbm(y~.,data=smote.mode, distribution= "bernoulli", n.trees=100,
-                     shrinkage=0.01, verbose =F, cv.folds = 5)
-
-modified.boot<-boost(subtrain.mod,validate.mod,1000,0.01)
-#smote.test<-syn_data_borderline(bank.test.aug,k=5)
-#bank.boot.test<-boost(subtrain,validate,1000,0.1)
-model <- modified.boot[[3]]
-save(modified.boot,file="model.r")
-###### to predict ###########
-prediction<-predict(model,modified_test,n.trees=1000,type='response')
-#save(prediction,file="prediction_basic_test.csv")
-prediction_class <- ifelse(prediction>0.5,1,0)
-save(prediction,file="prediction_mod.csv")
-
-table <- table(prediction_class,modified_test$y)
-save (table, file=("table_testerror.mod.r"))
-test_error = (mean(prediction_class!=bank.test.aug$y))
-
-
-summary(modified_train)
-summary(modified_test)
-summary(modified.boot)
-
-importance(modified.boot)
-
-
-
-"Prediction accuracy is 0.891 and AUC is 0.6697"
 
 ```
