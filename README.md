@@ -1,4 +1,4 @@
-# 565project
+# Machine Learning Project for Bank Data (STOR 565)
 
 The dataset (and the information described below) of this project can be found here: http://archive.ics.uci.edu/ml/datasets/Bank+Marketing
 
